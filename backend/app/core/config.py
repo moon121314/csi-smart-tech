@@ -4,6 +4,7 @@ from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+
 # This file lives at  backend/app/core/config.py.
 # Four .parent hops reach the project root (where .env lives).
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
@@ -35,11 +36,24 @@ class Settings(BaseSettings):
     database_url: str
     test_database_url: str
 
-    # --- MQTT (populated in Phase 10) ---
-    mqtt_broker_host: str = "__FILL_ME__"
+    # --- MQTT ---
+    mqtt_broker_host: str = "localhost"
     mqtt_broker_port: int = 1883
-    mqtt_candidate_id: str = "__FILL_ME__"
+    mqtt_candidate_id: str = "candidate-dev"
     mqtt_enabled: bool = False
+
+    # --- Derived MQTT topics ---
+    @property
+    def mqtt_challenge_topic(self) -> str:
+        return f"iso-01/{self.mqtt_candidate_id}/challenge"
+
+    @property
+    def mqtt_events_topic(self) -> str:
+        return f"iso-01/{self.mqtt_candidate_id}/events"
+
+    @property
+    def mqtt_response_topic(self) -> str:
+        return f"iso-01/{self.mqtt_candidate_id}/responses"
 
 
 # Singleton instance used across the app.

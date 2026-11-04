@@ -1,5 +1,4 @@
 # CSI Smart Tech — local development infrastructure
-# Only PostgreSQL runs here for now. Backend and frontend will be added in later phases.
 services:
   postgres:
     image: postgres:16-alpine
@@ -19,6 +18,15 @@ services:
       timeout: 3s
       retries: 10
       start_period: 10s
+
+  mosquitto:
+    image: eclipse-mosquitto:2.0.21
+    container_name: csi-mosquitto
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
 
 volumes:
   csi_pgdata:

@@ -13,7 +13,11 @@ from .core.database import SessionLocal
 from .core.logging import configure_logging
 from .modules.ack.router import router as ack_router
 from .modules.events.router import router as events_router
+from .modules.mqtt.router import attach_worker
+from .modules.mqtt.router import router as mqtt_router
+from .modules.mqtt.worker import MQTTWorker
 from .modules.state.router import router as state_router
+
 
 configure_logging(settings.log_level)
 logger = logging.getLogger(__name__)
@@ -25,7 +29,20 @@ async def lifespan(app: FastAPI):
         "app.startup",
         extra={"env": settings.app_env, "version": settings.app_version},
     )
+
+    worker: MQTTWorker | None = None
+    if settings.mqtt_enabled:
+        worker = MQTTWorker()
+        worker.start()
+        attach_worker(worker)
+    else:
+        logger.info("mqtt.disabled_by_config")
+
     yield
+
+    if worker is not None:
+        worker.stop()
+        attach_worker(None)
     logger.info("app.shutdown")
 
 
@@ -38,7 +55,6 @@ app = FastAPI(
 
 @app.exception_handler(RequestValidationError)
 async def request_validation_handler(request, exc: RequestValidationError):
-    """Return 400 for malformed request structures (per API contract)."""
     return JSONResponse(
         status_code=400,
         content={"detail": "Invalid request structure", "errors": exc.errors()},
@@ -47,7 +63,6 @@ async def request_validation_handler(request, exc: RequestValidationError):
 
 @app.get("/health")
 def health():
-    """Liveness + database reachability probe."""
     try:
         with SessionLocal() as session:
             session.execute(text("SELECT 1"))
@@ -66,3 +81,4 @@ def health():
 app.include_router(events_router, prefix="/api")
 app.include_router(state_router, prefix="/api")
 app.include_router(ack_router, prefix="/api")
+app.include_router(mqtt_router, prefix="/api")
