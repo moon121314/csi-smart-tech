@@ -28,8 +28,8 @@ class MQTTClient:
         self._client.on_disconnect = self._on_disconnect
         self._client.on_message = self._on_message
 
-        # topic-pattern → handler(topic, payload_dict)
-        self._handlers: dict[str, Callable[[str, dict], None]] = {}
+        # topic-pattern → handler(client, payload_dict)
+        self._handlers: dict[str, Callable[["MQTTClient", dict], None]] = {}
         self._lock = threading.Lock()
         self._status: dict[str, Any] = {
             "connected": False,
@@ -41,7 +41,9 @@ class MQTTClient:
         }
 
     def register_handler(
-        self, topic_pattern: str, handler: Callable[[str, dict], None]
+        self,
+        topic_pattern: str,
+        handler: Callable[["MQTTClient", dict], None],
     ) -> None:
         self._handlers[topic_pattern] = handler
 
@@ -93,7 +95,8 @@ class MQTTClient:
             return
 
         try:
-            handler(topic, payload)
+            # FIX: pass `self` (the MQTTClient) as first arg, not `topic`
+            handler(self, payload)
         except Exception as exc:
             logger.exception(
                 "mqtt.handler_error",
