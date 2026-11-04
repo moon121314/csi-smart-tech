@@ -11,7 +11,9 @@ from sqlalchemy import text
 from .core.config import settings
 from .core.database import SessionLocal
 from .core.logging import configure_logging
+from .modules.ack.router import router as ack_router
 from .modules.events.router import router as events_router
+from .modules.state.router import router as state_router
 
 configure_logging(settings.log_level)
 logger = logging.getLogger(__name__)
@@ -62,3 +64,5 @@ def health():
 
 
 app.include_router(events_router, prefix="/api")
+app.include_router(state_router, prefix="/api")
+app.include_router(ack_router, prefix="/api")
