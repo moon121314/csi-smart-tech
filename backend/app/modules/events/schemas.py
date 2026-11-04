@@ -1,6 +1,7 @@
 """Pydantic schemas for the events module."""
 
 from datetime import datetime, timezone
+
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
@@ -11,8 +12,8 @@ class EventIn(BaseModel):
 
     source_id: str = Field(..., min_length=1, max_length=64)
     event_id: str = Field(..., min_length=1, max_length=64)
-    type: str  # validated in service → REJECTED, not 400
-    quantity: int  # validated in service → REJECTED, not 400
+    type: str
+    quantity: int
     target_event_id: str | None = Field(default=None, max_length=64)
     event_time: datetime
 
@@ -35,3 +36,23 @@ class EventResult(BaseModel):
 
 class BatchResponse(BaseModel):
     results: list[EventResult]
+
+
+class EventOut(BaseModel):
+    """Serialized ProductionEvent for the dashboard listing."""
+
+    id: int
+    source_id: str
+    event_id: str
+    event_type: str
+    quantity: int
+    target_event_id: str | None
+    event_time: datetime
+    status: str
+    created_at: datetime
+    acknowledged: bool
+    acknowledged_by: str | None
+
+
+class EventListResponse(BaseModel):
+    events: list[EventOut]
