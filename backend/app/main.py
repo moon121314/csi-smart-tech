@@ -4,11 +4,14 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
 from .core.config import settings
 from .core.database import SessionLocal
 from .core.logging import configure_logging
+from .modules.events.router import router as events_router
 
 configure_logging(settings.log_level)
 logger = logging.getLogger(__name__)
@@ -16,9 +19,9 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Runs on startup and shutdown. Placeholder for MQTT worker start later."""
     logger.info(
-        "app.startup", extra={"env": settings.app_env, "version": settings.app_version}
+        "app.startup",
+        extra={"env": settings.app_env, "version": settings.app_version},
     )
     yield
     logger.info("app.shutdown")
@@ -29,6 +32,15 @@ app = FastAPI(
     version=settings.app_version,
     lifespan=lifespan,
 )
+
+
+@app.exception_handler(RequestValidationError)
+async def request_validation_handler(request, exc: RequestValidationError):
+    """Return 400 for malformed request structures (per API contract)."""
+    return JSONResponse(
+        status_code=400,
+        content={"detail": "Invalid request structure", "errors": exc.errors()},
+    )
 
 
 @app.get("/health")
@@ -47,3 +59,6 @@ def health():
         "db": db_status,
         "version": settings.app_version,
     }
+
+
+app.include_router(events_router, prefix="/api")
